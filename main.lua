@@ -9,7 +9,7 @@ function love.load()
 
   screen = {}
   screen.font = love.graphics.newFont("Public_Sans/static/PublicSans-Black.ttf", 20)
-  screen.cursor = love.graphics.newImage("cursor.png")
+  screen.cursor = {image={love.graphics.newImage("cursor.png"), love.graphics.newImage("cursorO.png")},x=0,y=0}
 
   --[[Creates Australian-English translations of the colour functions]]
   love.graphics.getBackgroundColour = love.graphics.getBackgroundColor
@@ -77,13 +77,23 @@ function love.load()
     end
     table.insert(tiles.light, t)
   end
-  propagate_lighting()
+  propagate_lighting(8)
 end
 
 function love.update(dt)
 	introUpdate(dt)
 
-  --propagate_lighting()
+  screen.cursor.x = math.floor(love.mouse.getX()/tiles.size)
+  screen.cursor.y = math.floor(love.mouse.getY()/tiles.size)
+
+  if love.mouse.isDown(1) then
+    tiles[screen.cursor.x+1][screen.cursor.y+1] = 1
+    update_world()
+  end
+  if love.mouse.isDown(2) then
+    tiles[screen.cursor.x+1][screen.cursor.y+1] = 2
+    update_world()
+  end
 end
 
 function love.draw()
@@ -91,6 +101,7 @@ function love.draw()
   -- local ty = -300*tiles.size/32+love.graphics.getHeight()/2-world.y*tiles.size
   -- love.graphics.translate(tx, ty)
 
+  --Draw Tiles
 	for x=1, tiles.wide do
     for y=1, tiles.high do
       if blocks[tiles[x][y]].type ~= "air" then
@@ -101,12 +112,16 @@ function love.draw()
     end
   end
 
-  love.graphics.setColour(1,1,1)
-  love.graphics.draw(screen.cursor, 400, 300, nil, tiles.size/16)
+  --Draw Cursor
+  love.graphics.setColour(1,1,1, 0.5)
+  love.graphics.draw(screen.cursor.image[1], screen.cursor.x*tiles.size, screen.cursor.y*tiles.size, nil, tiles.size/16)
+  love.graphics.setColour(1,1,1, 1)
+  love.graphics.draw(screen.cursor.image[2], screen.cursor.x*tiles.size, screen.cursor.y*tiles.size, nil, tiles.size/16)
 
   --love.graphics.translate(-tx, -ty)
 
   love.graphics.print("Seed: "..seed)
+  love.graphics.print("\n"..math.floor(love.mouse.getX()/tiles.size)..'\n'..math.floor(love.mouse.getY()/tiles.size))
 
   introDraw()
 end
@@ -133,7 +148,52 @@ function love.keypressed(k)
       end
     end
 
+    update_world()
+  end
+
+  if k == "f11" and love.system.getOS() == "Windows" then
+      love.window.setFullscreen(true)
+  end
+end
+
+function kill_lighting()
+  for x=1, tiles.wide do
+    for y=1, tiles.high do
+      local v = 0
+      if tiles.autotile[x][y] ~= 15 then
+        v = 1
+      end
+
+      tiles.light[x][y] = v
+    end
+  end
+end
+
+function propagate_lighting(reet)
+  local falloff = 0.2
+  kill_lighting()
+  for i=1, reet do
     for x=1, tiles.wide do
+      for y=1, tiles.high do
+        if y ~= 1 and tiles.light[x][y-1]-falloff > tiles.light[x][y] then
+          tiles.light[x][y] = tiles.light[x][y-1]-falloff
+        end
+        if x ~= tiles.wide and tiles.light[x+1][y]-falloff > tiles.light[x][y] then
+          tiles.light[x][y] = tiles.light[x+1][y]-falloff
+        end
+        if y ~= tiles.high and tiles.light[x][y+1]-falloff > tiles.light[x][y] then
+          tiles.light[x][y] = tiles.light[x][y+1]-falloff
+        end
+        if x ~= 1 and tiles.light[x-1][y]-falloff > tiles.light[x][y] then
+          tiles.light[x][y] = tiles.light[x-1][y]-falloff
+        end
+      end
+    end
+  end
+end
+
+function update_world()
+  for x=1, tiles.wide do
       for y=1, tiles.high do
         local v = 0
         if y == 1 or blocks[tiles[x][y-1]].type ~= "air" then
@@ -163,30 +223,5 @@ function love.keypressed(k)
         tiles.light[x][y] = v
       end
     end
-    propagate_lighting()
-  end
-
-  if k == "f11" and love.system.getOS() == "Windows" then
-      love.window.setFullscreen(true)
-  end
-end
-
-function propagate_lighting()
-  local falloff = 0.2
-  for x=1, tiles.wide do
-    for y=1, tiles.high do
-      if y ~= 1 and tiles.light[x][y-1]-falloff > tiles.light[x][y] then
-        tiles.light[x][y] = tiles.light[x][y-1]-falloff
-      end
-      if x ~= tiles.wide and tiles.light[x+1][y]-falloff > tiles.light[x][y] then
-        tiles.light[x][y] = tiles.light[x+1][y]-falloff
-      end
-      if y ~= tiles.high and tiles.light[x][y+1]-falloff > tiles.light[x][y] then
-        tiles.light[x][y] = tiles.light[x][y+1]-falloff
-      end
-      if x ~= 1 and tiles.light[x-1][y]-falloff > tiles.light[x][y] then
-        tiles.light[x][y] = tiles.light[x-1][y]-falloff
-      end
-    end
-  end
+    propagate_lighting(8)
 end
