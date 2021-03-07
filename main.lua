@@ -5,7 +5,7 @@ local seed = love.math.random(1000, 9999)
 function love.load()
   require("Intro")
   require("blocks")
-  introInitialise("Games")
+  introInitialise("Terraria-like lighting test")
 
   screen = {}
   screen.font = love.graphics.newFont("Public_Sans/static/PublicSans-Black.ttf", 20)
@@ -24,16 +24,19 @@ function love.load()
   love.graphics.setBackgroundColour(0.57, 0.78, 0.77)
 
 
-  tiles.wide = 25
-  tiles.high = 19 
-  tiles.size = 32
+  tiles.wide = 25*2
+  tiles.high = 19*2
+  tiles.size = 16
 
   for x=1, tiles.wide do
     local t = {}
+    local noise1 = love.math.noise(x/100,seed)*22
+    local noise2 = love.math.noise(x/20,seed)*6
+    local noise3 = love.math.noise(x/10,seed)*2
     for y=1, tiles.high do
-      if y <= 10+love.math.noise(x/20,seed)*6 then
+      if y <= noise1+noise2+noise3 then
         table.insert(t, 1)
-      elseif y <= 15+love.math.noise(x/20,seed)*3 then
+      elseif y <= noise1*1.5+noise2/1.5+noise3/2+5 then
         table.insert(t, 2)
       else
         table.insert(t, 3)
@@ -83,8 +86,8 @@ end
 function love.update(dt)
 	introUpdate(dt)
 
-  screen.cursor.x = math.floor(love.mouse.getX()/tiles.size)
-  screen.cursor.y = math.floor(love.mouse.getY()/tiles.size)
+  screen.cursor.x = math.min(math.max(--[[]]math.floor((love.mouse.getX()-world.x*tiles.size)/tiles.size--[[]]), 0), tiles.wide-1)
+  screen.cursor.y = math.min(math.max(--[[]]math.floor((love.mouse.getY()-world.y*tiles.size)/tiles.size--[[]]), 0), tiles.high-1)
 
   if love.mouse.isDown(1) then
     tiles[screen.cursor.x+1][screen.cursor.y+1] = 1
@@ -94,12 +97,30 @@ function love.update(dt)
     tiles[screen.cursor.x+1][screen.cursor.y+1] = 2
     update_world()
   end
+  if love.mouse.isDown(3) then
+    tiles[screen.cursor.x+1][screen.cursor.y+1] = 3
+    update_world()
+  end
+
+  local speed = -10/tiles.size
+  if love.keyboard.isDown("left") or love.keyboard.isDown("a") then
+    world.x = world.x - speed
+  end
+  if love.keyboard.isDown("right") or love.keyboard.isDown("d") then
+    world.x = world.x + speed
+  end
+  if love.keyboard.isDown("up") or love.keyboard.isDown("w") then
+    world.y = world.y - speed
+  end
+  if love.keyboard.isDown("down") or love.keyboard.isDown("s") then
+    world.y = world.y + speed
+  end
 end
 
 function love.draw()
-  -- local tx = -400*tiles.size/32+love.graphics.getWidth()/2-world.x*tiles.size
-  -- local ty = -300*tiles.size/32+love.graphics.getHeight()/2-world.y*tiles.size
-  -- love.graphics.translate(tx, ty)
+  local tx = world.x*tiles.size --% tiles.size-tiles.size
+  local ty = world.y*tiles.size --% tiles.size-tiles.size
+  love.graphics.translate(tx, ty)
 
   --Draw Tiles
 	for x=1, tiles.wide do
@@ -118,10 +139,11 @@ function love.draw()
   love.graphics.setColour(1,1,1, 1)
   love.graphics.draw(screen.cursor.image[2], screen.cursor.x*tiles.size, screen.cursor.y*tiles.size, nil, tiles.size/16)
 
-  --love.graphics.translate(-tx, -ty)
+  love.graphics.translate(-tx, -ty)
 
   love.graphics.print("Seed: "..seed)
-  love.graphics.print("\n"..math.floor(love.mouse.getX()/tiles.size)..'\n'..math.floor(love.mouse.getY()/tiles.size))
+  --love.graphics.print("\n"..math.floor(love.mouse.getX()/tiles.size)..'\n'..math.floor(love.mouse.getY()/tiles.size))
+  love.graphics.print("\n"..world.x..'\n'..world.y)
 
   introDraw()
 end
@@ -135,11 +157,13 @@ function love.keypressed(k)
     seed = love.math.random(1000, 9999)
 
     for x=1, tiles.wide do
+      local noise1 = love.math.noise(x/100,seed)*22
+      local noise2 = love.math.noise(x/20,seed)*6
+      local noise3 = love.math.noise(x/10,seed)*2
       for y=1, tiles.high do
-
-        if y <= 10+love.math.noise(x/20,seed)*6 then
+        if y <= noise1+noise2+noise3 then
           tiles[x][y] = 1
-        elseif y <= 15+love.math.noise(x/20,seed)*3 then
+        elseif y <= noise1*1.5+noise2/1.5+noise3/2+5 then
           tiles[x][y] = 2
         else
           tiles[x][y] = 3
@@ -149,6 +173,9 @@ function love.keypressed(k)
     end
 
     update_world()
+
+    world.x = 0
+    world.y = 0
   end
 
   if k == "f11" and love.system.getOS() == "Windows" then
