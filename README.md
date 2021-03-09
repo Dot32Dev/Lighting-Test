@@ -1,1 +1,2 @@
-# Tilling side scroller lighting, inspire by Terraria
+# 2D Lighting
+side scrolling terraria-inspired block lighting in Love2D
