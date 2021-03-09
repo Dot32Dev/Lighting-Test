@@ -8,3 +8,5 @@ side scrolling terraria-inspired lighting in Love2D
 - Each block never gets any darker
 - Lighting is run multiple times to propagate
 - When a block is edited, the lighting is reset
+
+My falloff is set to 0.2
