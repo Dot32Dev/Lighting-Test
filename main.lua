@@ -1,11 +1,12 @@
 local tiles={}
-local world = {x=0,y=0}
+local world = {}
 local seed = love.math.random(1000, 9999)
+local player = {}
 
 function love.load()
   require("Intro")
   require("blocks")
-  introInitialise("Definately not terraia")
+  introInitialise("Test")
 
   screen = {}
   screen.font = love.graphics.newFont("Public_Sans/static/PublicSans-Black.ttf", 20)
@@ -25,10 +26,9 @@ function love.load()
 
 
   tiles.wide = 25*2
-  tiles.high = 19*3
+  tiles.high = math.floor(19*2.5)
   tiles.size = 16
 
-  world.x = 0
   for x=1, tiles.wide do
     local t = {}
     local noise1 = love.math.noise(x/100,seed)*22
@@ -39,6 +39,8 @@ function love.load()
         table.insert(t, 1)
         if x == math.floor(tiles.wide/2) then
           world.y = math.floor(love.graphics.getHeight()/tiles.size/2)-(y-1)
+          player.x = x-1
+          player.y = y-1
         end
       elseif y <= noise1*1.5+noise2/1.5+noise3/2+5 then
         table.insert(t, 2)
@@ -85,6 +87,8 @@ function love.load()
     table.insert(tiles.light, t)
   end
   propagate_lighting(8)
+
+  world.x = 0 + (math.floor(love.graphics.getWidth()/tiles.size/2)-(player.x+1)-0)*0.3
 end
 
 function love.update(dt)
@@ -106,19 +110,22 @@ function love.update(dt)
     update_world()
   end
 
-  local speed = -10/tiles.size
+  local speed = 10/tiles.size
   if love.keyboard.isDown("left") or love.keyboard.isDown("a") then
-    world.x = world.x - speed
+    player.x = player.x - speed
   end
   if love.keyboard.isDown("right") or love.keyboard.isDown("d") then
-    world.x = world.x + speed
+    player.x = player.x + speed
   end
   if love.keyboard.isDown("up") or love.keyboard.isDown("w") then
-    world.y = world.y - speed
+    player.y = player.y - speed
   end
   if love.keyboard.isDown("down") or love.keyboard.isDown("s") then
-    world.y = world.y + speed
+    player.y = player.y + speed
   end
+
+  world.x = world.x + (math.floor(love.graphics.getWidth()/tiles.size/2)-(player.x+1)-world.x)*0.3
+  world.y = world.y + (math.floor(love.graphics.getHeight()/tiles.size/2)-(player.y+1)-world.y)*0.3
 end
 
 function love.draw()
@@ -134,6 +141,9 @@ function love.draw()
   --Draw Tiles
 	for x=1, tiles.wide do
     for y=1, tiles.high do
+      if (x-1)*tiles.size+tx > love.graphics.getWidth() then
+        break
+      end
       if blocks[tiles[x][y]].type ~= "air" then
         love.graphics.setColour(tiles.light[x][y],tiles.light[x][y],tiles.light[x][y])
         love.graphics.draw(blocks[tiles[x][y]].image[math.min(#blocks[tiles[x][y]].image, tiles.autotile[x][y]+1)][(math.floor(random(x,y)) % #blocks[tiles[x][y]].image[math.min(#blocks[tiles[x][y]].image, tiles.autotile[x][y]+1)])+1], (x-1)*tiles.size, (y-1)*tiles.size, nil, tiles.size/16)
@@ -148,10 +158,17 @@ function love.draw()
   love.graphics.setColour(1,1,1, 1)
   love.graphics.draw(screen.cursor.image[2], screen.cursor.x*tiles.size, screen.cursor.y*tiles.size, nil, tiles.size/16)
 
+  --Draw Player
+  --love.graphics.circle("fill", player.x*tiles.size+tiles.size/2, player.y*tiles.size+tiles.size/2, tiles.size/2)
+
   love.graphics.translate(-tx, -ty)
 
+  love.graphics.setColour(0,0,0,0.1)
+  love.graphics.rectangle("fill", 0, 0, love.graphics.getFont():getWidth("Mouse buttons to mine/place blocks"), love.graphics.getFont():getHeight()*3)
+  love.graphics.setColour(1,1,1)
   love.graphics.print("Seed: "..seed)
-  love.graphics.print("\n"..math.floor(love.mouse.getX()/tiles.size)..'\n'..math.floor(love.mouse.getY()/tiles.size))
+  love.graphics.print("\nWASD to move, R to regen\nMouse buttons to mine/place blocks")
+  --love.graphics.print("\n"..math.floor(love.mouse.getX()/tiles.size)..'\n'..math.floor(love.mouse.getY()/tiles.size))
   --love.graphics.print("\n"..world.x..'\n'..world.y)
 
   introDraw()
@@ -173,7 +190,9 @@ function love.keypressed(k)
         if y <= noise1+noise2+noise3 then
           tiles[x][y] = 1
           if x == math.floor(tiles.wide/2) then
-            world.y = math.floor(love.graphics.getHeight()/tiles.size/2)-(y-1)
+            world.y = math.floor(love.graphics.getHeight()/tiles.size/2)-y
+            player.x = x-1
+            player.y = y-1
           end
         elseif y <= noise1*1.5+noise2/1.5+noise3/2+5 then
           tiles[x][y] = 2
@@ -186,7 +205,7 @@ function love.keypressed(k)
 
     update_world()
 
-    world.x = 0
+    world.x = world.x + (math.floor(love.graphics.getWidth()/tiles.size/2)-(player.x+1)-world.x)*0.3
   end
 
   if k == "f11" and love.system.getOS() == "Windows" then
